@@ -1,4 +1,4 @@
-# diffusionlife
+# diffusionlife -- [Demo](https://harryhinch.github.io/diffusionlife/)
 
 Simulation inspired by Tom Mohr's https://particle-life.com/
 
