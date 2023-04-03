@@ -1,4 +1,4 @@
-/* v.1.0.0 */
+/* v.1.1.0 */
 
 @font-face {
     font-family: "Agave Regular";
@@ -71,10 +71,13 @@ body{
     padding:0;
     height: calc( 100% - 4px );
 }
+#sim .window{
+    overflow: hidden;
+}
 #simcanvas{
     display: flex;
     justify-content: center;
-    height: min( 85vw, 85vh );
+    height: 100%;
 }
 #canvasoverlay{
     visibility: hidden;
@@ -121,6 +124,9 @@ body{
 .window .contents{
     background: #0e0e0e;
     padding: 0.5rem;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 .header {
     font-weight: 300;
@@ -139,6 +145,10 @@ body{
     font-weight: 600;
     color: #ddd8;
     font-size: 0.75rem;
+}
+.header > #fps-counter{
+    margin-left: 1rem;
+    font-size: 0.85rem;
 }
 .header > .author{
     font-weight: 200;
@@ -163,6 +173,7 @@ a:hover{
 
 .slidecontainer{
     padding: 0.1rem 0.5rem 0.1rem;
+    width: 100%;
 }
 .slidecontainer p{
     font-weight: 300;
@@ -238,13 +249,13 @@ button{
     font-family: 'Agave Regular', sans-serif;
     font-weight: 400;
     font-size: 1rem;
-    border: 0.1rem solid #292929;
+    border: 0.1rem solid #494949;
     text-shadow: 1px 0 #fff8;
     box-shadow: inset -0.25rem -0.25rem #0004,
                 inset 0.25rem 0.25rem #fff4;
-    padding: 0.2rem 0.35rem 0.2rem;
-    margin-bottom: 0.5rem;
-    line-height: 1.2rem;
+    padding: 0.35rem 0.35rem 0.2rem;
+    margin: 0 0.2rem 0.35rem;
+    line-height: 1rem;
     text-align: center;
     text-decoration: none;
     transition: 0.2s background-color;
@@ -301,9 +312,6 @@ button.toggled{
     body {
         grid-template-columns: 100vh auto;
         grid-template-rows: 100vh auto;
-    }
-    #simcanvas {
-        height: fit-content;
     }
     #controls {
         font-size: 100%;

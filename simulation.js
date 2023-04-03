@@ -1,102 +1,33 @@
-// v1.0.0
+/* v.2.0.0 */
 
 var FF_RESOLUTION = 4;
-var SIM_WIDTH = 1000;
-var SIM_HEIGHT = 1000;
-var SIM_CHECK_SQDIST = (80 * FF_RESOLUTION)**2;
+var QTREE_CAPACITY = 8;
+var SIM_ADAPTIVE_TIMESCALE = true;
+var SIM_AUTOPLAY = false;
+var AUTOPLAY_TIMER = 0;
+var SIM_PARTICLESMAX = 4000;
+var SIM_PARTICLETYPE_MAX = 6;
+var SIM_PARTICLETYPES_LAST = -1;
+var COLOR_TYPE_SHUFFLE = true;
 
-addControl('SIM_PARTICLES', {
-    type: 'slider',
-    group: 'sim',
-    display_name: 'Particle Count',
-    display_unit: '',
-    value_min: 10,
-    value_default: 250,
-    value_max: 500,
-    value_step: 1,
-});
-addControl('FF_DIST_SCALE', {
-    type: 'slider',
-    group: 'sim',
-    display_name: 'Distance Scaling',
-    display_unit: 'px',
-    value_min: 5,
-    value_default: 40,
-    value_max: 80,
-    value_step: 1,
-});
-addControl('FF_GLOBAL_SCALE', {
-    type: 'slider',
-    group: 'sim',
-    display_name: 'Force Multiplier',
-    display_unit: 'x',
-    value_min: 0.005,
-    value_default: 0.5,
-    value_max: 2,
-    value_step: 0.005,
-});
-addControl('SIM_SPEEDLIMIT', {
-    type: 'slider',
-    group: 'sim',
-    display_name: 'Speed Limit',
-    display_unit: 'x',
-    value_min: 0.25,
-    value_default: 1,
-    value_max: 10,
-    value_step: 0.05,
-});
-addControl('SIM_SPEEDDAMPEN', {
-    type: 'slider',
-    group: 'sim',
-    display_name: 'Inverse Speed Dampening',
-    display_unit: '',
-    value_min: 1,
-    value_default: 4,
-    value_max: 10,
-    value_step: 0.1,
-});
-
-addControl('DISP_PARTICLERADIUS', {
-    type: 'slider',
-    group: 'display',
-    display_name: 'Particle Radius',
-    display_unit: 'px',
-    value_min: 1,
-    value_default: 2,
-    value_max: 5,
-    value_step: 0.1,
-});
-addControl('DISP_PARTICLEALPHA', {
-    type: 'slider',
-    group: 'display',
-    display_name: 'Particle Alpha',
-    display_unit: '',
-    value_min: 0,
-    value_default: 1,
-    value_max: 1,
-    value_step: 0.01,
-});
-
-var SIM_PARTICLESMAX = 500;
-var SIM_PARTICLETYPES = 6;
-
-const COLOR_TYPES = [
+var COLOR_TYPES = [
     '#FF2200',
     '#00FF00',
-    '#4466FF',
-    '#FF00FF',
-    '#00FFFF',
+    '#7766FF',
+    '#FF22DD',
+    '#11FFDD',
     '#FFFF00',
 ]
 
 // index into data array for particles
-const PHYS_DATA_SIZE = 5;
+const PHYS_DATA_SIZE = 7;
 const PHYS_X_POS = 0;
 const PHYS_Y_POS = 1;
 const PHYS_X_VEL = 2;
 const PHYS_Y_VEL = 3;
-const PHYS_TYPE = 4;
-
+const PHYS_HEADING = 4;
+const PHYS_MAGNITUDE= 5;
+const PHYS_TYPE = 6;
 
 class ForceFunction
 {
@@ -105,12 +36,17 @@ class ForceFunction
         this.data = new Float64Array(FF_RESOLUTION + 2);
         this.init(1);
     }
-    init(slowmorph)
+    init(mode="randomize", slowmorph=1)
     {
         this.data[0] = -1;
         this.data[FF_RESOLUTION-1] = 0;
         for(let i = 1; i<=FF_RESOLUTION; i++)
-            this.data[i] = lerp(this.data[i], Math.random()*2-1, slowmorph);
+        {
+            let target_val = 0;
+            if (mode == "randomize")
+                target_val = Math.random()*2-1;
+            this.data[i] = lerp(this.data[i], target_val, slowmorph);
+        }
     }
     get(distance)
     {
@@ -120,7 +56,10 @@ class ForceFunction
         if(dist >= (FF_RESOLUTION+1)) return 0;
         const index = Math.floor(dist);
         const fractional = dist - index;
-        return lerp(this.data[index], this.data[index+1], fractional);
+        let lerp_start = this.data[index];
+        if (index == 0)
+            lerp_start *= FF_ZERODIST_REPULSION;
+        return lerp(lerp_start, this.data[index+1], fractional);
     }
     draw(ctx, x_pos, y_pos, width, height)
     {
@@ -164,46 +103,64 @@ class ForceFunction
 
 class ParticleSim
 {
-    constructor(sim_size) 
+    constructor() 
     {
-        SIM_WIDTH = sim_size;
-        SIM_HEIGHT = sim_size;
         // Store all 2d positions, velocity, and type in array
         this.physdata = new Float64Array(PHYS_DATA_SIZE * SIM_PARTICLESMAX);
-        this.forcefunc = new Array(SIM_PARTICLETYPES**2);
-        for(let i = 0; i<SIM_PARTICLETYPES**2; i++)
+        this.forcefunc = new Array(SIM_PARTICLETYPE_MAX**2);
+        for(let i = 0; i<SIM_PARTICLETYPE_MAX**2; i++)
             this.forcefunc[i] = new ForceFunction();
         this.init();
+        this.quadtree = null;
+        this.quadtree_frameskip = 0;
+        this.checkdistance = FF_DIST_SCALE * FF_RESOLUTION;
     }
-    init(randomize_positions=true, slowmorph = 1)
+    calculate_qtree()
     {
-        if(randomize_positions)
+        this.quadtree = new ToroidalQTree(new ToroidalZone(0.5,0.5,0.5,0.5), QTREE_CAPACITY);
+        this.checkdistance = FF_DIST_SCALE * FF_RESOLUTION;
+        for(let i = 0; i < PHYS_DATA_SIZE * SIM_PARTICLES; i+=PHYS_DATA_SIZE)
+        {
+            this.quadtree.insert(
+                this.physdata[i+PHYS_X_POS] % 1,
+                this.physdata[i+PHYS_Y_POS] % 1,
+                this.physdata[i+PHYS_TYPE]);
+        }
+    }
+    init(randomize_positions=true, ff_mode="randomize", slowmorph = 1)
+    {
         for(let i = 0; i<PHYS_DATA_SIZE * SIM_PARTICLESMAX; i+=PHYS_DATA_SIZE)
         {
             // randomize position, zero out velocity
-            this.physdata[i+PHYS_X_POS] = Math.random() * SIM_WIDTH;
-            this.physdata[i+PHYS_Y_POS] = Math.random() * SIM_HEIGHT;
-            this.physdata[i+PHYS_X_VEL] = 0;
-            this.physdata[i+PHYS_Y_VEL] = 0;
-            this.physdata[i+PHYS_TYPE] = get_random_int(SIM_PARTICLETYPES);
+            if(randomize_positions)
+            {
+                this.physdata[i+PHYS_X_POS] = Math.random();
+                this.physdata[i+PHYS_Y_POS] = Math.random();
+                this.physdata[i+PHYS_X_VEL] = 0;
+                this.physdata[i+PHYS_Y_VEL] = 0;
+            }
+                if(SIM_PARTICLETYPES_LAST != SIM_PARTICLETYPES)
+                    this.physdata[i+PHYS_TYPE] = get_random_int(SIM_PARTICLETYPES);
         }
-
+        SIM_PARTICLETYPES_LAST = SIM_PARTICLETYPES;
+        if(COLOR_TYPE_SHUFFLE)
+            COLOR_TYPES.shuffle();
         for(let i = 0; i<SIM_PARTICLETYPES**2; i++)
-            this.forcefunc[i].init(slowmorph);
+            this.forcefunc[i].init(ff_mode, slowmorph);
     }
     apply_edge_force(ax, ay, bx, by, atype, btype, scale)
     {
-        let fx = 0;
-        let fy = 0;
-        [-SIM_WIDTH, 0, SIM_WIDTH].forEach( (x_offset) => {
-            [-SIM_HEIGHT, 0, SIM_HEIGHT].forEach( (y_offset) => {
-                if((ax+x_offset-bx)**2 + (ay+y_offset-by)**2 < SIM_CHECK_SQDIST){
-                    const f = this.apply_force(ax+x_offset, ay+y_offset, bx, by, atype, btype, scale);
-                    fx += f.x;
-                    fy += f.y;
-                }    
-            });
-        });
+        let fx = 0, fy = 0;
+        let offset_x = 0, offset_y = 0;
+        let dx = Math.abs(ax-bx);
+        let dy = Math.abs(ay-by);
+        if (dx > 0.5) {dx = 1.0 - dx; offset_x = -Math.sign(ax-bx)} 
+        if (dy > 0.5) {dx = 1.0 - dy; offset_y = -Math.sign(ay-by)} 
+        if((dx)**2 + (dy)**2 < 1){
+            const f = this.apply_force(ax+offset_x, ay+offset_y, bx, by, atype, btype, scale);
+            fx += f.x;
+            fy += f.y;
+        }  
         return {
             x: fx,
             y: fy,
@@ -215,7 +172,8 @@ class ParticleSim
         // normalized force vector
         const fx = (ax-bx)/(dist+0.01); 
         const fy = (ay-by)/(dist+0.01);
-        const ff = this.forcefunc[atype+SIM_PARTICLETYPES*btype];
+        const ff = this.forcefunc[atype+SIM_PARTICLETYPE_MAX*btype];
+        if(ff == undefined)console.log(atype, btype)
         const forcemult = ff.get(dist) * scale * FF_GLOBAL_SCALE;
         // console.log(dist, fx, fy, forcemult)
         return {
@@ -225,32 +183,31 @@ class ParticleSim
     }
     simulate(timestep)
     {
+
+        this.calculate_qtree();
         // calculate total change in force for each particle
         for(let i = 0; i<SIM_PARTICLES; i++)
         {
-            const physbuffer_index = i*2;
-            const this_particle_index = i*5;
-            // this.physbuffer[physbuffer_index] = 0;
-            // this.physbuffer[physbuffer_index+1] = 0;
+            const this_particle_index = i*PHYS_DATA_SIZE;
             const ax = this.physdata[this_particle_index+PHYS_X_POS];
             const ay = this.physdata[this_particle_index+PHYS_Y_POS];
             let sum_x = 0;
             let sum_y = 0;
             const atype = parseInt(this.physdata[this_particle_index+PHYS_TYPE]);
 
-            for(let j = 0; j<SIM_PARTICLES; j++)
-            {
-                if (i == j) continue;
-                const physdata_index = j*PHYS_DATA_SIZE;
-                const bx = this.physdata[physdata_index+PHYS_X_POS];
-                const by = this.physdata[physdata_index+PHYS_Y_POS];
-                const btype = this.physdata[physdata_index+PHYS_TYPE];
-                const fvector = this.apply_edge_force(bx, by, ax, ay, atype, btype, 1);
-                // this.physbuffer[physbuffer_index] += fvector.x;
-                // this.physbuffer[physbuffer_index+1] += fvector.y;
-                sum_x += fvector.x
-                sum_y += fvector.y
-            }
+            let searchzone = new ToroidalZone(ax, ay, this.checkdistance, this.checkdistance);
+            let candidates = this.quadtree.query(searchzone)
+            if(candidates == undefined) candidates = [];
+            candidates.forEach(candidate => {
+                const bx = candidate[0];
+                const by = candidate[1];
+                const btype = candidate[2];
+                if(ax != bx && ay != by){
+                    const fvector = this.apply_edge_force(bx, by, ax, ay, atype, btype, 0.05);
+                    sum_x += fvector.x
+                    sum_y += fvector.y
+                }
+            });
             //apply new velocity
             this.physdata[this_particle_index+PHYS_X_VEL] += sum_x*timestep;
             this.physdata[this_particle_index+PHYS_Y_VEL] += sum_y*timestep;
@@ -259,9 +216,14 @@ class ParticleSim
                                            +this.physdata[this_particle_index+PHYS_Y_VEL]**2)
             const vel_heading = Math.atan2(this.physdata[this_particle_index+PHYS_Y_VEL],
                                            this.physdata[this_particle_index+PHYS_X_VEL])
+
+            this.physdata[this_particle_index+PHYS_HEADING] = vel_heading;
+
             // soft speed limit
             if (vel_magnitude > SIM_SPEEDLIMIT)
                 vel_magnitude += (SIM_SPEEDLIMIT - vel_magnitude) / SIM_SPEEDDAMPEN;
+
+            this.physdata[this_particle_index+PHYS_MAGNITUDE] = PHYS_MAGNITUDE;
             
             this.physdata[this_particle_index+PHYS_X_VEL] = Math.cos(vel_heading) * vel_magnitude;
             this.physdata[this_particle_index+PHYS_Y_VEL] = Math.sin(vel_heading) * vel_magnitude;
@@ -275,33 +237,120 @@ class ParticleSim
             // wall wrap
             if(this.physdata[i+PHYS_X_POS]<0)
             {
-                this.physdata[i+PHYS_X_POS] += SIM_WIDTH;
+                this.physdata[i+PHYS_X_POS] += 1;
             }
-            if(this.physdata[i+PHYS_X_POS]>SIM_WIDTH)
+            if(this.physdata[i+PHYS_X_POS]>1)
             {
-                this.physdata[i+PHYS_X_POS] -= SIM_WIDTH;
+                this.physdata[i+PHYS_X_POS] -= 1;
             }
             if(this.physdata[i+PHYS_Y_POS]<0)
             {
-                this.physdata[i+PHYS_Y_POS] += SIM_HEIGHT;
+                this.physdata[i+PHYS_Y_POS] += 1;
             }
-            if(this.physdata[i+PHYS_Y_POS]>SIM_HEIGHT)
+            if(this.physdata[i+PHYS_Y_POS]>1)
             {
-                this.physdata[i+PHYS_Y_POS] -= SIM_HEIGHT;
+                this.physdata[i+PHYS_Y_POS] -= 1;
+            }
+        }
+        if(SIM_AUTOPLAY)
+        {
+            const time_diff = (Date.now() - AUTOPLAY_TIMER)/1000;
+            if(time_diff >= AUTOPLAY_TIMELIMIT)
+            {
+                AUTOPLAY_TIMER = Date.now();
+                if(SIM_AUTOPLAY_PTYPES)
+                {
+                    // change random distribution here
+                    // values like 3, 4 are more likley than 1, 6
+                    const twodice = 2 + get_random_int(6) + get_random_int(6);
+                    const new_val = Math.floor(twodice/2);
+                    getControlFromName('Particle Types').set_value(new_val);
+                }
+                this.init(false, "randomize");
+                updateFParam();
             }
         }
     }
     draw_particles(ctx)
     {
+        let SIM_WIDTH = ctx.canvas.clientWidth;
+        let SIM_HEIGHT = ctx.canvas.clientHeight;
+        const SQ_SIZE = Math.min(SIM_WIDTH, SIM_HEIGHT);
+        const x_offset = Math.max(0,SIM_WIDTH-SQ_SIZE)/2;
+        const y_offset = Math.max(0,SIM_HEIGHT-SQ_SIZE)/2;
         ctx.globalAlpha = DISP_PARTICLEALPHA
         for(let i = 0; i<PHYS_DATA_SIZE * SIM_PARTICLES; i+=PHYS_DATA_SIZE)
         {
-            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
-            // ctx.fillRect (this.physdata[i+PHYS_X_POS]-RADIUS, this.physdata[i+PHYS_Y_POS]-RADIUS, 2*RADIUS, 2*RADIUS);
-            ctx.beginPath();
-            ctx.arc (this.physdata[i+PHYS_X_POS], this.physdata[i+PHYS_Y_POS], DISP_PARTICLERADIUS, 0, 2*Math.PI, false);
-            ctx.fill();
+            this.#draw_particle(ctx, i, x_offset, y_offset, SQ_SIZE);
+            if(x_offset>0){
+                let x_shift = this.physdata[i+PHYS_X_POS] > 0.5 ? -1 : 1;
+                this.#draw_particle(ctx, i, x_offset+(x_shift*SQ_SIZE), y_offset, SQ_SIZE);
+            }
         }
         ctx.globalAlpha = 1;
+        if(DEBUG_SHOW_QUADTREE)
+            this.quadtree.debug_draw(ctx);
+    }
+    #draw_particle(ctx, i, x_offset, y_offset, SQ_SIZE)
+    {
+        if(DISP_PARTICLESHAPE == 'Square')
+        {
+            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+        
+            ctx.fillRect(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset-DISP_PARTICLERADIUS,
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset-DISP_PARTICLERADIUS,
+                DISP_PARTICLERADIUS*2, DISP_PARTICLERADIUS*2);
+        }
+        else if(DISP_PARTICLESHAPE == 'Circle')
+        {
+            ctx.beginPath();
+            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.arc (
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset,
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset,
+                DISP_PARTICLERADIUS, 0, 2*Math.PI, false);
+            ctx.fill();
+        }
+        else if(DISP_PARTICLESHAPE == 'Triangle')
+        {
+            const angle = this.physdata[i+PHYS_HEADING];
+            const mag = DISP_PARTICLERADIUS*3;
+            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.beginPath();
+            ctx.moveTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + mag * Math.cos(angle),
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset + mag * Math.sin(angle),
+            );
+            ctx.lineTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + mag/2 * Math.cos(angle+2),
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset + mag/2 * Math.sin(angle+2),
+            );
+            ctx.lineTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + mag/2 * Math.cos(angle-2),
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset + mag/2 * Math.sin(angle-2),
+            );
+            ctx.lineTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + mag * Math.cos(angle),
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset + mag * Math.sin(angle),
+            );
+            ctx.fill();
+        }
+        else if(DISP_PARTICLESHAPE == 'Vector')
+        {
+            ctx.beginPath();
+            ctx.strokeStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.lineWidth = DISP_PARTICLERADIUS/2+0.5;
+            const mag = 200 - this.physdata[i+PHYS_MAGNITUDE]*10 + DISP_PARTICLERADIUS*35;
+            ctx.moveTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset,
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset,
+            );
+            ctx.lineTo(
+                this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + this.physdata[i+PHYS_X_VEL] * mag,
+                this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset + this.physdata[i+PHYS_Y_VEL] * mag,
+            );
+            ctx.stroke();
+        }
     }
 }
