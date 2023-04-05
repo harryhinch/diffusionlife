@@ -1,4 +1,4 @@
-/* v.1.1.0 */
+/* v.1.1.1 */
 
 @font-face {
     font-family: "Agave Regular";
@@ -79,6 +79,9 @@ body{
     justify-content: center;
     height: 100%;
 }
+#simcanvas.fullscreen{
+    cursor: none; 
+}
 #canvasoverlay{
     visibility: hidden;
     position: absolute;
@@ -116,9 +119,12 @@ body{
 }
 #ffsettings{
     text-align: center;
+    align-items: center;
+    justify-content: space-around;
 }
 #ffcanvas{
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    min-height: 12rem;
 }
 
 .window .contents{
@@ -172,7 +178,7 @@ a:hover{
 }
 
 .slidecontainer{
-    padding: 0.1rem 0.5rem 0.1rem;
+    padding: 0.1rem 1rem 0.1rem;
     width: 100%;
 }
 .slidecontainer p{
@@ -256,6 +262,7 @@ button{
     padding: 0.35rem 0.35rem 0.2rem;
     margin: 0 0.2rem 0.35rem;
     line-height: 1rem;
+    max-height: 2rem;
     text-align: center;
     text-decoration: none;
     transition: 0.2s background-color;
@@ -326,14 +333,18 @@ button.toggled{
 @media only screen and (max-width: 75rem) {
     button{
         font-size: 2rem;
-        line-height: 2rem;
+        padding: 1.25rem 1rem 1.75rem;
     }
     .header {
         font-size: 150%;
-        height: 2.9rem;
+        padding: 0.5rem;
     }
     .slidecontainer {
-        padding: 0.1rem 2.5rem 0.1rem;
+        padding: 0.1rem 3.5rem 0.1rem;
+    }
+    .slidecontainer p {
+        font-size: 2rem;
+        margin-top: 0.5rem;
     }
     .slider {
         height: 2.5rem;

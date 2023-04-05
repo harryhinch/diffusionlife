@@ -1,4 +1,4 @@
-/* v.1.1.0 */
+/* v.1.1.1 */
 
 var previous_time;
 var framerate = 60;
@@ -85,10 +85,13 @@ function toggleFullscreen() {
   
 function resizeCanvas() {
     if(document.fullscreenElement){
+        const parent_div = document.getElementById('simcanvas');
+        parent_div.classList.add('fullscreen');
         ctx.canvas.width = window.innerWidth;
         ctx.canvas.height = window.innerHeight;
     } else {
-        const parent_div = document.getElementById('simcanvas')
+        const parent_div = document.getElementById('simcanvas');
+        parent_div.classList.remove('fullscreen');
         ctx.canvas.width = parent_div.offsetWidth;
         ctx.canvas.height = parent_div.offsetHeight;
     }

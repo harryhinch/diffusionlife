@@ -1,4 +1,4 @@
-/* v.1.1.0 */
+/* v.1.1.1 */
 class Control
 {
     constructor(var_name, properties, key) 
@@ -139,7 +139,7 @@ addControl('FF_GLOBAL_SCALE', {
     group: 'sim',
     display_name: 'Force Multiplier',
     display_unit: 'x',
-    value_min: 0.005,
+    value_min: 0,
     value_default: 0.5,
     value_max: 2,
     value_step: 0.005,
@@ -159,9 +159,9 @@ addControl('SIM_SPEEDLIMIT', {
     group: 'sim',
     display_name: 'Speed Limit',
     display_unit: 'x',
-    value_min: 0.001,
+    value_min: 0,
     value_default: 0.02,
-    value_max: 0.1,
+    value_max: 0.2,
     value_step: 0.001,
 });
 addControl('SIM_SPEEDDAMPEN', {
@@ -171,8 +171,8 @@ addControl('SIM_SPEEDDAMPEN', {
     display_unit: '',
     value_min: 1,
     value_default: 2.5,
-    value_max: 10,
-    value_step: 0.1,
+    value_max: 15,
+    value_step: 0.05,
 });
 
 addControl('fullscreen_enable_button', {
@@ -304,12 +304,12 @@ addControl('AUTOPLAY_TIMELIMIT', {
 addControl('randomize_ff', {
     type: 'button',
     group: 'ffbuttons',
-    display_name: 'Randomize All Function Parameters',
+    display_name: 'Randomize',
     onclick: 'sim.init(false, \'randomize\');updateFParam();',
 });
 addControl('identity_ff', {
     type: 'button',
     group: 'ffbuttons',
-    display_name: 'Reset Function Parameters',
+    display_name: 'Reset',
     onclick: 'sim.init(false, \'identity\');updateFParam();',
 });

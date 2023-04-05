@@ -1,10 +1,11 @@
-/* v.2.0.0 */
+/* v.2.0.1 */
 
 var FF_RESOLUTION = 4;
 var QTREE_CAPACITY = 8;
 var SIM_ADAPTIVE_TIMESCALE = true;
 var SIM_AUTOPLAY = false;
 var AUTOPLAY_TIMER = 0;
+var SIM_AUTOPLAY_PTYPES = false;
 var SIM_PARTICLESMAX = 4000;
 var SIM_PARTICLETYPE_MAX = 6;
 var SIM_PARTICLETYPES_LAST = -1;
@@ -129,6 +130,9 @@ class ParticleSim
     }
     init(randomize_positions=true, ff_mode="randomize", slowmorph = 1)
     {
+        if(SIM_AUTOPLAY_PTYPES)
+            this.#randomize_ptypes();
+        
         for(let i = 0; i<PHYS_DATA_SIZE * SIM_PARTICLESMAX; i+=PHYS_DATA_SIZE)
         {
             // randomize position, zero out velocity
@@ -139,13 +143,13 @@ class ParticleSim
                 this.physdata[i+PHYS_X_VEL] = 0;
                 this.physdata[i+PHYS_Y_VEL] = 0;
             }
-                if(SIM_PARTICLETYPES_LAST != SIM_PARTICLETYPES)
-                    this.physdata[i+PHYS_TYPE] = get_random_int(SIM_PARTICLETYPES);
+            if(SIM_PARTICLETYPES_LAST != SIM_PARTICLETYPES)
+                this.physdata[i+PHYS_TYPE] = get_random_int(SIM_PARTICLETYPES);
         }
         SIM_PARTICLETYPES_LAST = SIM_PARTICLETYPES;
         if(COLOR_TYPE_SHUFFLE)
             COLOR_TYPES.shuffle();
-        for(let i = 0; i<SIM_PARTICLETYPES**2; i++)
+        for(let i = 0; i<SIM_PARTICLETYPE_MAX**2; i++)
             this.forcefunc[i].init(ff_mode, slowmorph);
     }
     apply_edge_force(ax, ay, bx, by, atype, btype, scale)
@@ -258,18 +262,18 @@ class ParticleSim
             if(time_diff >= AUTOPLAY_TIMELIMIT)
             {
                 AUTOPLAY_TIMER = Date.now();
-                if(SIM_AUTOPLAY_PTYPES)
-                {
-                    // change random distribution here
-                    // values like 3, 4 are more likley than 1, 6
-                    const twodice = 2 + get_random_int(6) + get_random_int(6);
-                    const new_val = Math.floor(twodice/2);
-                    getControlFromName('Particle Types').set_value(new_val);
-                }
                 this.init(false, "randomize");
                 updateFParam();
             }
         }
+    }
+    #randomize_ptypes()
+    {
+        // changing the random distribution
+        // values like 3, 4 are more likley than 1, 6
+        const twodice = 2 + get_random_int(6) + get_random_int(6);
+        const new_val = Math.floor(twodice/2);
+        getControlFromName('Particle Types').set_value(new_val);
     }
     draw_particles(ctx)
     {
@@ -285,6 +289,9 @@ class ParticleSim
             if(x_offset>0){
                 let x_shift = this.physdata[i+PHYS_X_POS] > 0.5 ? -1 : 1;
                 this.#draw_particle(ctx, i, x_offset+(x_shift*SQ_SIZE), y_offset, SQ_SIZE);
+            }else if(y_offset>0){
+                let y_shift = this.physdata[i+PHYS_Y_POS] > 0.5 ? -1 : 1;
+                this.#draw_particle(ctx, i, x_offset, y_offset+(y_shift*SQ_SIZE), SQ_SIZE);
             }
         }
         ctx.globalAlpha = 1;

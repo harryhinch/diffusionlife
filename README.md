@@ -1,5 +1,7 @@
 # diffusionlife -- [View Demo](https://harryhinch.github.io/diffusionlife/)
 
+**shortlink: [diffused.life](https://diffused.life/)**
+
 Diffusion life is web toy that simulates attractions & repulsions between particles. The (relatively) simple rules can birth complex patterns that mimic cellular life, crystalline structures, and other abstract phenomena.
 Inspired by Tom Mohr's [particle life](https://particle-life.com/) & Jeffrey Ventrella's [clusters](https://ventrella.com/Clusters/).
 
