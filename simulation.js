@@ -2,7 +2,7 @@
 
 var FF_RESOLUTION = 4;
 var QTREE_CAPACITY = 8;
-var SIM_ADAPTIVE_TIMESCALE = true;
+var SIM_ADAPTIVE_TIMESCALE = false;
 var SIM_AUTOPLAY = false;
 var AUTOPLAY_TIMER = 0;
 var SIM_AUTOPLAY_PTYPES = false;

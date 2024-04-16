@@ -1,4 +1,4 @@
-/* v.1.1.1 */
+/* v.1.1.2 */
 class Control
 {
     constructor(var_name, properties, key) 
@@ -110,7 +110,7 @@ addControl('SIM_PARTICLES', {
     display_name: 'Particle Count',
     display_unit: '',
     value_min: 10,
-    value_default: 200,
+    value_default: 500,
     value_max: 2000,
     value_step: 1,
 });
@@ -160,7 +160,7 @@ addControl('SIM_SPEEDLIMIT', {
     display_name: 'Speed Limit',
     display_unit: 'x',
     value_min: 0,
-    value_default: 0.02,
+    value_default: 0.004,
     value_max: 0.2,
     value_step: 0.001,
 });
@@ -170,7 +170,7 @@ addControl('SIM_SPEEDDAMPEN', {
     display_name: 'Speed Limit Relaxation',
     display_unit: '',
     value_min: 1,
-    value_default: 2.5,
+    value_default: 6,
     value_max: 15,
     value_step: 0.05,
 });
@@ -236,7 +236,7 @@ addControl('PLAYBACKSCALE', {
     display_name: 'Physics Timescale',
     display_unit: '',
     value_min: 1,
-    value_default: 20,
+    value_default: 35,
     value_max: 100,
     value_step: 1,
 });
@@ -244,7 +244,7 @@ addControl('PLAYBACKSCALE', {
 addControl('adaptive_timescale', {
     type: 'toggle',
     group: 'playback',
-    value: true,
+    value: false,
     display_name: 'Adaptive Timescale OFF',
     display_name_toggled: 'Adaptive Timescale ON',
     doToggle: (new_val) => {
@@ -296,7 +296,7 @@ addControl('AUTOPLAY_TIMELIMIT', {
     display_name: 'Auto Randomize Timer',
     display_unit: ' sec',
     value_min: 3,
-    value_default: 20,
+    value_default: 30,
     value_max: 180,
     value_step: 1,
 });
