@@ -1,4 +1,4 @@
-/* v.1.1.2 */
+/* v.1.2.0 */
 class Control
 {
     constructor(var_name, properties, key) 
@@ -181,7 +181,13 @@ addControl('fullscreen_enable_button', {
     display_name: 'Open Sim Fullscreen',
     onclick: 'toggleFullscreen();',
 });
-
+addControl('DISP_COLORMODE', {
+    type: 'choice',
+    group: 'display',
+    display_name: 'Color Mode',
+    value_default: 'Angle (Desaturate)',
+    choices: ['Type', 'Velocity', 'Angle (Shimmer)', 'Angle (Desaturate)'],
+});
 addControl('DISP_PARTICLESHAPE', {
     type: 'choice',
     group: 'display',
@@ -195,8 +201,8 @@ addControl('DISP_PARTICLERADIUS', {
     display_name: 'Particle Radius',
     display_unit: 'px',
     value_min: 1,
-    value_default: 2,
-    value_max: 5,
+    value_default: 3.5,
+    value_max: 10,
     value_step: 0.1,
 });
 addControl('DISP_PARTICLEALPHA', {
@@ -304,12 +310,121 @@ addControl('AUTOPLAY_TIMELIMIT', {
 addControl('randomize_ff', {
     type: 'button',
     group: 'ffbuttons',
-    display_name: 'Randomize',
+    display_name: 'Randomize All',
     onclick: 'sim.init(false, \'randomize\');updateFParam();',
 });
 addControl('identity_ff', {
     type: 'button',
     group: 'ffbuttons',
-    display_name: 'Reset',
+    display_name: 'Reset All',
     onclick: 'sim.init(false, \'identity\');updateFParam();',
 });
+
+var ff_control;
+var ff_control_coords;
+function initFFcontrols()
+{
+    document.getElementById('popup_ff_save_button').onclick = buttonFFeditorSave;
+    document.getElementById('popup_ff_cancel_button').onclick = buttonFFeditorCancel;
+    document.getElementById('popup_ff_reset_button').onclick = buttonFFeditorReset;
+    document.getElementById('popup_ff_randomize_button').onclick = buttonFFeditorRandomize;
+    document.getElementById('popup_ff_attract_button').onclick = buttonFFeditorAttract;
+    document.getElementById('popup_ff_repel_button').onclick = buttonFFeditorRepel;
+    let body_html = [];
+    body_html.push(`
+    <div id="popup_ff_graphdiv">
+        <canvas id="popup_ff_canvas"></canvas>
+    </div>`);
+    for (let i = 0; i < 4; i++) {
+        body_html.push(`<input type="range" min="-1" max="1" step="0.01" class="slider"
+            oninput="doFFslider(this, ${i+1})" orient="vertical" id="ff_slider_${i+1}">`);
+    }
+    document.getElementById('popup_ff_body').innerHTML = body_html.join('');
+    ff_control = new ForceFunction();
+}
+
+function openFFeditor(i, j)
+{
+    ff_control_coords = {i: i, j: j};
+    document.getElementById('popup_ff_container').style.display = '';
+    const ff = sim.forcefunc[j+SIM_PARTICLETYPE_MAX*i];
+    ff_control.remap(ff);
+    resetFFsliders();
+    redrawFFeditorgrid();
+}
+function resetFFsliders()
+{
+    for (let i = 1; i <= 4; i++)
+        document.getElementById(`ff_slider_${i}`).value = ff_control.data[i];
+}
+function redrawFFeditorgrid()
+{
+    const canvas_elem = document.getElementById('popup_ff_canvas');
+    const cell_size = document.getElementById('popup_ff_graphdiv').getBoundingClientRect().height;
+    canvas_elem.width = cell_size;
+    canvas_elem.height = cell_size;
+    const padding = 3;
+    const offset = 30;
+    const ctx = canvas_elem.getContext('2d');
+
+    // draw dest
+    ctx.fillStyle = COLOR_TYPES[ff_control_coords.i];
+    ctx.beginPath();
+    ctx.arc (offset/2 + cell_size/2, offset/2, offset/2, 0, 2*Math.PI, false);
+    ctx.fill();
+    // draw source
+    ctx.fillStyle = COLOR_TYPES[ff_control_coords.j];
+    ctx.beginPath();
+    ctx.arc (offset/2, offset/2 + cell_size/2, offset/2, 0, 2*Math.PI, false);
+    ctx.fill();
+
+    ff_control.draw(ctx, padding+offset, padding+offset, cell_size-padding-2-offset, cell_size-padding-2-offset);
+}
+function doFFslider(elem, data_num)
+{
+    ff_control.data[data_num] = elem.value;
+    redrawFFeditorgrid();
+}
+function buttonFFeditorSave()
+{
+    document.getElementById('popup_ff_container').style.display = 'none';
+    const i = ff_control_coords.i;
+    const j = ff_control_coords.j;
+    const ff = sim.forcefunc[j+SIM_PARTICLETYPE_MAX*i];
+    ff.remap(ff_control);
+    updateFParam();
+}
+function buttonFFeditorCancel()
+{
+    document.getElementById('popup_ff_container').style.display = 'none';
+}
+function buttonFFeditorReset()
+{
+    ff_control.init('identity', 1);
+    resetFFsliders();
+    redrawFFeditorgrid();
+}
+function buttonFFeditorRandomize()
+{
+    ff_control.init('randomize', 1);
+    resetFFsliders();
+    redrawFFeditorgrid();
+}
+function buttonFFeditorAttract()
+{
+    for(let i = 1; i<=FF_RESOLUTION; i++)
+    {
+        ff_control.data[i] = lerp(ff_control.data[i], 1, 0.5);
+    }
+    resetFFsliders();
+    redrawFFeditorgrid();
+}
+function buttonFFeditorRepel()
+{
+    for(let i = 1; i<=FF_RESOLUTION; i++)
+    {
+        ff_control.data[i] = lerp(ff_control.data[i], -1, 0.5);
+    }
+    resetFFsliders();
+    redrawFFeditorgrid();
+}

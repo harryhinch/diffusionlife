@@ -122,9 +122,35 @@ body{
     align-items: center;
     justify-content: space-around;
 }
-#ffcanvas{
+#ffgrid{
+    display: grid;
+    margin: 0;
     margin-bottom: 0.5rem;
     min-height: 12rem;
+    max-height: 15rem;
+    aspect-ratio: 1;
+}
+#ffgrid.size-1{ grid-template: repeat(2, 1fr) / repeat(2, 1fr); }
+#ffgrid.size-2{ grid-template: repeat(3, 1fr) / repeat(3, 1fr); }
+#ffgrid.size-3{ grid-template: repeat(4, 1fr) / repeat(4, 1fr); }
+#ffgrid.size-4{ grid-template: repeat(5, 1fr) / repeat(5, 1fr); }
+#ffgrid.size-5{ grid-template: repeat(6, 1fr) / repeat(6, 1fr); }
+#ffgrid.size-6{ grid-template: repeat(7, 1fr) / repeat(7, 1fr); }
+
+.ffgrid-cell{
+    aspect-ratio: 1;
+    margin: 0;
+    overflow: hidden;
+    cursor: pointer;
+}
+.ffgrid-cell:hover{
+    background-color: #fff4;
+}
+
+.ffgrid-cell-header {
+    aspect-ratio: 1;
+    margin: 20%;
+    border-radius: 100px;
 }
 
 .window .contents{
@@ -268,6 +294,7 @@ button{
     transition: 0.2s background-color;
     background-color: #1e1e1e;
     color: #ddd;
+    cursor: pointer;
 }
 button>span{
     font-size: 1.1rem;
@@ -286,28 +313,62 @@ button.toggled{
                 inset 0.25rem 0.25rem #0004;
 }
 
-.palette-container{
+.slider[type=range][orient=vertical] {
+    appearance: slider-vertical;
+    width: 1rem;
+    height: calc( 100% - 32px );
+    margin: 0 0.5rem;
+}
+
+.popup-container{
+    position: absolute;
+    top: 0;
+    left:0;
+    width:100vw;
+    height: 100vh;
+    z-index: 500;
+    background-color: #0008;
+    display: grid;
+}
+.popup-container > .popup{
+    grid-area: main;
+    display: grid;
+    background: #000;
+    width: 30rem;
+    height: fit-content;
+    padding: 0;
+    grid-template-columns: [leftside] auto [rightside];
+    grid-template-rows: [header-start] 2rem [header-end] auto [footer-start] 2.5rem [footer-end];
+    grid-template-areas: 
+        "header"
+        "body"
+        "footer";
+}
+.popup-header{
+    grid-area: header;
+}
+.popup-header > h5{
+    margin-top: 0;
+}
+.popup-body{
     display: flex;
+    align-items: end;
     justify-content: space-between;
+    grid-area: body;
+    padding: 0.5rem;
 }
-.palette-preview{
-    height: 0.75rem;
-    line-height: 0.75rem;
-    font-size: 0.75rem;
-    border: 1px solid #333;
-    padding: 0;
-    margin: 0;
-    margin-top: 0.8rem;
+#popup_ff_graphdiv{
+    aspect-ratio: 1;
+    overflow: hidden;
 }
-.palette-preview span{
-    padding: 0;
-    margin: 0;
-    display: inline-block;
-    width:0.75rem;
-    height:0.74rem;
+.popup-footer{
+    grid-area: footer;
+    border-top: 1px solid #888;
+    padding: 0.2rem 0.4rem;
+    text-align: right;
 }
-.palette-name label {
-    font-size: 1.5rem;
+.popup-footer button{
+    margin: 0.15rem 0;
 }
 
 @media only screen and (min-width: 75rem) {

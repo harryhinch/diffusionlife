@@ -20,7 +20,7 @@
     <div class="window">
       <div class="header">
         Diffusion Life
-        <span class="subtext">v.2.0.2</span><span class="subtext" id="fps-counter">0FPS</span>
+        <span class="subtext">v.2.1.0</span><span class="subtext" id="fps-counter">0FPS</span>
         <span class="author">made by <a href="https://github.com/harryhinch/diffusionlife">@harryhinch 
         <img alt="Transparent White GitHub Mark" width=20 height=20 src="
           data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAABUUlEQV
@@ -64,9 +64,26 @@
       </div>
     </div>
   </div>
-  <script src="lib.js?v=1.1.0"></script>
-  <script src="controls.js?v=1.1.2"></script>
-  <script src="simulation.js?v=2.0.1"></script>
-  <script src="main.js?v=1.1.1"></script>
+  <div class="popup-container" id="popup_ff_container" style="display: none;">
+    <div class="popup window">
+      <div class="popup-header header">
+        Modifying Function Parameter
+      </div>
+      <div class="popup-body" id="popup_ff_body">
+      </div>
+      <div class="popup-footer" id="popup_ff_footer">
+        <button type="button" id="popup_ff_attract_button">Attract</button>
+        <button type="button" id="popup_ff_repel_button">Repel</button>
+        <button type="button" id="popup_ff_reset_button">Reset</button>
+        <button type="button" id="popup_ff_randomize_button">Randomize</button>
+        <button type="button" id="popup_ff_cancel_button">Cancel</button>
+        <button type="button" id="popup_ff_save_button">Save</button>
+      </div>
+    </div>
+  </div>
+  <script src="lib.js?v=1.1.1"></script>
+  <script src="controls.js?v=1.2.0"></script>
+  <script src="simulation.js?v=2.1.0"></script>
+  <script src="main.js?v=1.2.0"></script>
 </body>
 </html>

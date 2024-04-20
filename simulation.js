@@ -1,4 +1,4 @@
-/* v.2.0.1 */
+/* v.2.1.0 */
 
 var FF_RESOLUTION = 4;
 var QTREE_CAPACITY = 8;
@@ -62,6 +62,12 @@ class ForceFunction
             lerp_start *= FF_ZERODIST_REPULSION;
         return lerp(lerp_start, this.data[index+1], fractional);
     }
+    remap(other)
+    {
+        // set current data to other data
+        for(let i = 0; i <= FF_RESOLUTION; i++)
+            this.data[i] = other.data[i];
+    }
     draw(ctx, x_pos, y_pos, width, height)
     {
         // box
@@ -99,6 +105,7 @@ class ForceFunction
         ctx.lineTo(x_pos+width,y_pos+height/2);
         ctx.stroke();
     }
+    
 };
 
 
@@ -115,6 +122,7 @@ class ParticleSim
         this.quadtree = null;
         this.quadtree_frameskip = 0;
         this.checkdistance = FF_DIST_SCALE * FF_RESOLUTION;
+        this.last_timestep = 0;
     }
     calculate_qtree()
     {
@@ -187,7 +195,7 @@ class ParticleSim
     }
     simulate(timestep)
     {
-
+        this.last_timestep = timestep;
         this.calculate_qtree();
         // calculate total change in force for each particle
         for(let i = 0; i<SIM_PARTICLES; i++)
@@ -298,11 +306,42 @@ class ParticleSim
         if(DEBUG_SHOW_QUADTREE)
             this.quadtree.debug_draw(ctx);
     }
+    #get_particle_color(i)
+    {
+        if(DISP_COLORMODE == 'Type')
+            return COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+        if(DISP_COLORMODE == 'Velocity')
+        {
+            const vel_magnitude = Math.sqrt(this.physdata[i+PHYS_X_VEL]**2
+                                  +this.physdata[i+PHYS_Y_VEL]**2)/this.last_timestep;
+            const rgb_data = HSVtoRGB(vel_magnitude/2, 1, 0.66+Math.min(0.33,vel_magnitude/4));
+            return `rgb(${rgb_data.r},${rgb_data.g},${rgb_data.b})`;
+        }
+        if(DISP_COLORMODE == 'Angle (Desaturate)')
+        {
+            const vel_magnitude = Math.sqrt(this.physdata[i+PHYS_X_VEL]**2
+                                  +this.physdata[i+PHYS_Y_VEL]**2)/this.last_timestep;
+            const vel_heading = Math.atan2(this.physdata[i+PHYS_Y_VEL],
+                                           this.physdata[i+PHYS_X_VEL]);
+            const rgb_data = HSVtoRGB((3.14+vel_heading)/(6.28), Math.min(1,vel_magnitude*2), 1);
+            return `rgb(${rgb_data.r},${rgb_data.g},${rgb_data.b})`;
+        }
+        if(DISP_COLORMODE == 'Angle (Shimmer)')
+        {
+            // let vel_magnitude = Math.sqrt(this.physdata[i+PHYS_X_VEL]**2
+            //                     +this.physdata[i+PHYS_Y_VEL]**2)/this.last_timestep;
+            const vel_heading = Math.atan2(this.physdata[i+PHYS_Y_VEL],
+                                           this.physdata[i+PHYS_X_VEL]);
+            const rgb_data = HSVtoRGB((3.14+vel_heading)/(6.28), 1, 1);
+            return `rgb(${rgb_data.r},${rgb_data.g},${rgb_data.b})`;
+        }
+        return "#fff"
+    }
     #draw_particle(ctx, i, x_offset, y_offset, SQ_SIZE)
     {
         if(DISP_PARTICLESHAPE == 'Square')
         {
-            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.fillStyle = this.#get_particle_color(i);
         
             ctx.fillRect(
                 this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset-DISP_PARTICLERADIUS,
@@ -312,7 +351,7 @@ class ParticleSim
         else if(DISP_PARTICLESHAPE == 'Circle')
         {
             ctx.beginPath();
-            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.fillStyle = this.#get_particle_color(i);
             ctx.arc (
                 this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset,
                 this.physdata[i+PHYS_Y_POS]*SQ_SIZE+y_offset,
@@ -323,7 +362,7 @@ class ParticleSim
         {
             const angle = this.physdata[i+PHYS_HEADING];
             const mag = DISP_PARTICLERADIUS*3;
-            ctx.fillStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.fillStyle = this.#get_particle_color(i);
             ctx.beginPath();
             ctx.moveTo(
                 this.physdata[i+PHYS_X_POS]*SQ_SIZE+x_offset + mag * Math.cos(angle),
@@ -346,7 +385,7 @@ class ParticleSim
         else if(DISP_PARTICLESHAPE == 'Vector')
         {
             ctx.beginPath();
-            ctx.strokeStyle = COLOR_TYPES[parseInt(this.physdata[i+PHYS_TYPE])];
+            ctx.strokeStyle = this.#get_particle_color(i);
             ctx.lineWidth = DISP_PARTICLERADIUS/2+0.5;
             const mag = 200 - this.physdata[i+PHYS_MAGNITUDE]*10 + DISP_PARTICLERADIUS*35;
             ctx.moveTo(

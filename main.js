@@ -1,4 +1,4 @@
-/* v.1.1.1 */
+/* v.1.2.0 */
 
 var previous_time;
 var framerate = 60;
@@ -55,7 +55,7 @@ function drawFFMatrix(ctx, width, height)
     {
         for (let j = 0; j < SIM_PARTICLETYPES; j++) 
         {
-            const ff = sim.forcefunc[j+i*SIM_PARTICLETYPES];
+            const ff = sim.forcefunc[i+SIM_PARTICLETYPE_MAX*j];
             const x_pos = (i+1) * colwidth + padding;
             const y_pos = (j+1) * rowheight + padding;
             ff.draw(ctx, x_pos, y_pos, colwidth - padding, rowheight - padding);
@@ -63,9 +63,51 @@ function drawFFMatrix(ctx, width, height)
     }
 }
 
+function redrawFFGrid()
+{
+    const ffgrid = document.getElementById('ffgrid');
+    const grid_height = ffgrid.getBoundingClientRect().height;
+    const grid_size = SIM_PARTICLETYPES + 1;
+    const cell_size = grid_height / grid_size;
+    const padding = 2;
+
+    let grid_data = [];
+    for (let i = 0; i < grid_size; i++)
+    {
+        for (let j = 0; j < grid_size; j++) 
+        {
+            // not a header row/column
+            if (i > 0 && j > 0)
+            {
+                grid_data[j+i*grid_size] = `<div class="ffgrid-cell" onclick="openFFeditor(${j-1},${i-1})">
+                    <canvas id="ff-cell-${i-1}-${j-1}" width="${cell_size}" height="${cell_size}"></canvas></div>`;
+
+            } else {
+                if (i == 0 && j == 0)
+                    grid_data[j+i*grid_size] = `<div class="ffgrid-cell-header"></div>`;
+                else
+                    grid_data[j+i*grid_size] = `<div class="ffgrid-cell-header" style="background-color:${COLOR_TYPES[Math.max(i,j)-1]}"></div>`;
+            }
+        }
+    }
+    ffgrid.classList = `size-${SIM_PARTICLETYPES}`;
+    ffgrid.innerHTML = grid_data.join('');
+    // now that DOM is updated, draw on each canvas:
+    for (let i = 0; i < SIM_PARTICLETYPES; i++)
+    {
+        for (let j = 0; j < SIM_PARTICLETYPES; j++) 
+        {
+            const ctx = document.getElementById(`ff-cell-${i}-${j}`).getContext('2d');
+            const ff = sim.forcefunc[i+SIM_PARTICLETYPE_MAX*j];
+            ff.draw(ctx, padding, padding, cell_size-padding-2, cell_size-padding-2);
+        }
+    }
+}
+
+
 function updateFParam()
 {
-    drawFFMatrix(ffctx, 200, 200)
+    redrawFFGrid();
 }
 
 function toggleFullscreen() {
@@ -107,18 +149,21 @@ window.onload = () => {
 
     sim = new ParticleSim();
 
-    document.getElementById('ffsettings').innerHTML = `<canvas id="ffcanvas" width="${200}" height="${200}"></canvas>`;
+    // document.getElementById('ffsettings').innerHTML = `<canvas id="ffcanvas" width="${200}" height="${200}"></canvas>`;
+    document.getElementById('ffsettings').innerHTML = `<div id="ffgrid"></div>`;
     document.getElementById('ffsettings').innerHTML += `<div class="button-container">
         ${getControlHTML('ffbuttons').join('\n')}</div>`;
     document.getElementById('simsettings').innerHTML = getControlHTML('sim').join('\n');
     document.getElementById('playback').innerHTML = getControlHTML('playback').join('\n');
     document.getElementById('dispsettings').innerHTML = getControlHTML('display').join('\n');
 
-    ffctx = document.getElementById('ffcanvas').getContext('2d');
-    updateFParam();
-
+    // ffctx = document.getElementById('ffcanvas').getContext('2d');
+    
     previous_time = window.performance.now();
     window.requestAnimationFrame(drawFrame);
+    
+    initFFcontrols();
+    setTimeout(()=>{updateFParam()},1);
 
     var framecounter = document.getElementById('fps-counter');
     setInterval(()=>{
