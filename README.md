@@ -18,9 +18,8 @@ The algorithm to find nearby particles implements a [QuadTree](https://en.wikipe
 
 ## Roadmap
 - ~~Improve performance with better, cleaner algorithm~~ ✔
-- --Allow modifying a function parameter-- ✔
-- --Color Mapping-- ✔ 
+- ~~Allow modifying a function parameter~~ ✔
+- ~~Color Mapping~~ ✔ 
 - Color Palettes
 - Saving and loading simulations
-- Add Audio?
-- Use Web Assembly for better performance?
+- Interactivity (touch & drag particles)
